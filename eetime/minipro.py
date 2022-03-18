@@ -26,14 +26,15 @@ import os
 
 
 class Minipro:
-    def __init__(self, device=None):
+    def __init__(self, device=None, verbose=False):
+        self.verbose = verbose
         self.path = os.getenv("MINIPRO", 'minipro')
         self.device = device
 
     def files(self):
-        # if self.verbose:
-        if 0:
-            return subprocess.STDOUT, subprocess.STDOUT
+        if self.verbose:
+            # return subprocess.STDOUT, subprocess.STDOUT
+            return open("/dev/stdout", "w"), open("/dev/stderr", "w")
         else:
             return subprocess.DEVNULL, subprocess.DEVNULL
             #return open(os.devnull, 'wb'), open(os.devnull, 'wb')
@@ -42,22 +43,25 @@ class Minipro:
         device = device or self.device
         if device is None:
             raise ValueError("Device required")
-        tmpfn = '/tmp/uvminipror.bin'
-        stdout, stderr = self.files()
+        tmpfn = '/tmp/eetime_r.bin'
         args = [self.path, '-p', device, '-r', tmpfn]
         if force:
             args.append("-y")
+        stdout, stderr = self.files()
         subprocess.check_call(args, stdout=stdout, stderr=stderr)
-        code = open(tmpfn, 'rb').read()
+        with open(tmpfn, 'rb') as f:
+            code = f.read()
         return {"code": code}
 
     def write(self, code, device=None, force=False):
         device = device or self.device
         if device is None:
             raise ValueError("Device required")
-        tmpfn = '/tmp/uvminiprow.bin'
-        open(tmpfn, 'wb').write(code)
+        tmpfn = '/tmp/eetime_w.bin'
+        with open(tmpfn, 'wb') as f:
+            f.write(code)
         args = [self.path, '-p', device, '-w', tmpfn]
         if force:
             args.append("-y")
-        subprocess.check_call(args)
+        stdout, stderr = self.files()
+        subprocess.check_call(args, stdout=stdout, stderr=stderr)

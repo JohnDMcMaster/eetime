@@ -39,7 +39,12 @@ def tnow():
     return datetime.datetime.utcnow().isoformat()
 
 
-def wait_erased(fnout, prog, erased_threshold=20., interval=3.0):
+def wait_erased(fnout,
+                prog,
+                erased_threshold=20.,
+                interval=3.0,
+                prog_time=None,
+                verbose=False):
     """
     erased_threshold: stop when this percent contiguous into a successful erase
         Ex: if 99 iterations wasn't fully erased but 100+ was, stop at 120 iterations
@@ -56,6 +61,7 @@ def wait_erased(fnout, prog, erased_threshold=20., interval=3.0):
             "erased_threshold": erased_threshold
         }
         fout.write(json.dumps(j) + '\n')
+        fout.flush()
 
         tstart = time.time()
         # Last iteration timestamp. Used to "frame lock" reads at set interval
@@ -72,40 +78,54 @@ def wait_erased(fnout, prog, erased_threshold=20., interval=3.0):
             tlast = time.time()
             now = tnow()
             passn += 1
-            read_buf = prog.read()
-            erased, erase_percent = is_erased(read_buf)
+            read_buf = prog.read()["code"]
+            erased, erase_percent = is_erased(read_buf, prog_dev=prog.device)
             if erased:
                 nerased += 1
             else:
                 nerased = 0
+            # Declare done when we've been erased for some percentage of elapsed time
             complete_percent = 100.0 * nerased / passn
+            # Convert to more human friendly 100% scale
+            end_check = 100. * complete_percent / erased_threshold
 
             j = {
                 'iter': passn,
                 'datetime': now,
                 'read': fw2str(read_buf),
+                'read_meta': "zlib",
                 'complete_percent': complete_percent,
                 'erase_percent': erase_percent,
                 'erased': erased
             }
             fout.write(json.dumps(j) + '\n')
+            fout.flush()
 
             signature = hash8(read_buf)
             print(
-                "%s iter %u: erased %u w/ erase_percent %0.3f%%, sig %s, erase completion: %0.1f"
-                % (now, passn, erased, erase_percent, signature,
-                   100. * complete_percent / erased_threshold))
+                "%s iter % 3u: is_erased %u w/ erase_percent % 8.3f%%, sig %s, end_check: %0.1f%%"
+                % (
+                    now,
+                    passn,
+                    erased,
+                    erase_percent,
+                    signature,
+                    #
+                    end_check))
             if thalf is None and erase_percent >= 50:
                 thalf = tlast
                 dt_half = thalf - tstart
                 print("50%% erased after %0.1f sec" % (dt_half, ))
-            if complete_percent >= erased_threshold:
+            if end_check >= 100.0:
                 break
         dt = tlast - tstart
         print("Erased after %0.1f sec" % (dt, ))
 
-        j = {"type": "footer", "etime": dt, "half_etime": dt_half}
+        j = {"type": "footer", "erase_time": dt, "half_erase_time": dt_half}
+        if prog_time is not None:
+            j["prog_time"] = prog_time
         fout.write(json.dumps(j) + '\n')
+        fout.flush()
     return dt, dt_half
 
 
@@ -114,14 +134,15 @@ def run(dout,
         erased_threshold=20.,
         interval=3.0,
         passes=10,
+        write_init=True,
         verbose=False):
     if not os.path.exists(dout):
-        os.mkdir(dout)
+        os.makedirs(dout, exist_ok=True)
 
     print("")
-    prog = Minipro(device=prog_dev)
+    prog = Minipro(device=prog_dev, verbose=verbose)
     print("Checking programmer...")
-    size = len(prog.read())
+    size = len(prog.read()["code"])
     print("Device is %u bytes" % size)
     # Write 0's at the beginning of every pass
     init_buf = bytearray(size)
@@ -130,13 +151,20 @@ def run(dout,
         fnout = '%s/iter_%02u.jl' % (dout, passn)
         print('')
         print('Writing to %s' % fnout)
-        print('Writing initial buffer...')
-        prog.write(init_buf)
-        print('Wrote')
+        if write_init:
+            print('Writing initial buffer...')
+            tstart = time.time()
+            prog.write(init_buf)
+            prog_time = time.time() - tstart
+            print('Wrote in %0.1f sec' % prog_time)
+        else:
+            prog_time = None
         wait_erased(fnout,
-                    prog_dev=prog_dev,
+                    prog=prog,
                     erased_threshold=erased_threshold,
-                    interval=interval)
+                    interval=interval,
+                    prog_time=prog_time,
+                    verbose=verbose)
 
 
 if __name__ == "__main__":
@@ -164,6 +192,10 @@ if __name__ == "__main__":
         '--postfix',
         default="",
         help='Use default output dir, but add description postfix')
+    util.add_bool_arg(parser,
+                      "--write-init",
+                      default=True,
+                      help="For debugging")
     util.add_bool_arg(parser, "--verbose", default=False)
     args = parser.parse_args()
 
@@ -175,5 +207,6 @@ if __name__ == "__main__":
         args.device,
         passes=args.passes,
         erased_threshold=args.erased_threshold,
-        interval=args.internval,
+        interval=args.interval,
+        write_init=args.write_init,
         verbose=args.verbose)
