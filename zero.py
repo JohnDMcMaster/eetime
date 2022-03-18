@@ -1,44 +1,25 @@
 #!/usr/bin/env python3
 
-from proghal import progs
+from eetime.minipro import Minipro
 
-import json
-import datetime
-import time
-import zlib
-import binascii
-import hashlib
 
-def read_fw(prog, args):
-    cfg = {}
-    progs.apply_run_args(args, cfg, "read")
-    return prog.read(cfg)["code"]
+def run(prog_dev):
+    prog = Minipro(device=prog_dev)
+    print("Checking programmer...")
+    size = len(prog.read())
+    print("Device is %u bytes" % size)
+    # Write 0's at the beginning of every pass
+    prog.write(bytearray(size))
 
-def write_fw(prog, fw, args):
-    cfg = {"code": fw}
-    progs.apply_run_args(args, cfg, "write")
-    return prog.write(cfg)
-
-def run( prog_dev, args):
-    print("")
-    print('Initializing programmer')
-    init_cfg = {}
-    progs.apply_init_args(args, init_cfg)
-    prog = progs.get_prog(args.prog_prog, init_cfg)
-    print('Programmer ready')
-
-    ref_fw = read_fw(prog, args)
-    nbytes = len(ref_fw)
-    print("Reference firmware: %u bytes" % nbytes)
-
-    fw = bytearray(nbytes)
-    write_fw(prog, fw, args)
 
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description='Write all bits to 0 of given device')
-    progs.add_args(parser, prefix="prog-")
+    parser = argparse.ArgumentParser(
+        description='Write all bits to 0 of given device')
+    parser.add_argument('--device',
+                        required=True,
+                        help='minipro device. See "minipro -l"')
     args = parser.parse_args()
 
-    run(args.prog_device, args)
+    run(args.device)

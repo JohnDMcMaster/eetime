@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+
+from eetime.util import tostr
+from eetime import util
+from eetime.minipro import Minipro
+
+import json
+import datetime
+import time
+import zlib
+import binascii
+import hashlib
+import os
+
+
+def popcount(x):
+    return bin(x).count("1")
+
+
+def is_erased(fw, prog_dev):
+    # for now assume all 1's is erased
+    # on some devices like PIC this isn't true due to file 0 padding
+    set_bits = sum([popcount(x) for x in bytearray(fw)])
+    possible_bits = len(fw) * 8
+    percent = 100.0 * set_bits / possible_bits
+    return set_bits == possible_bits, percent
+
+
+def hash8(buf):
+    """Quick hash to visually indicator to user if data is still changing"""
+    return tostr(binascii.hexlify(hashlib.md5(buf).digest())[0:8])
+
+
+def fw2str(fw):
+    return tostr(binascii.hexlify(zlib.compress(fw)))
+
+
+def tnow():
+    return datetime.datetime.utcnow().isoformat()
+
+
+def wait_erased(fnout, prog, erased_threshold=20., interval=3.0):
+    """
+    erased_threshold: stop when this percent contiguous into a successful erase
+        Ex: if 99 iterations wasn't fully erased but 100+ was, stop at 120 iterations
+    interval: how often, in seconds, to read the device
+    """
+
+    with open(fnout, "w") as fout:
+        j = {
+            "type": "header",
+            "prog": "minipro",
+            "prog_dev": prog.device,
+            "datetime": tnow(),
+            "interval": interval,
+            "erased_threshold": erased_threshold
+        }
+        fout.write(json.dumps(j) + '\n')
+
+        tstart = time.time()
+        # Last iteration timestamp. Used to "frame lock" reads at set interval
+        tlast = None
+        # Timestamp when EPROM was first half erased
+        thalf = None
+        passn = 0
+        nerased = 0
+        while True:
+            if tlast is not None:
+                while time.time() - tlast < interval:
+                    time.sleep(0.1)
+
+            tlast = time.time()
+            now = tnow()
+            passn += 1
+            read_buf = prog.read()
+            erased, erase_percent = is_erased(read_buf)
+            if erased:
+                nerased += 1
+            else:
+                nerased = 0
+            complete_percent = 100.0 * nerased / passn
+
+            j = {
+                'iter': passn,
+                'datetime': now,
+                'read': fw2str(read_buf),
+                'complete_percent': complete_percent,
+                'erase_percent': erase_percent,
+                'erased': erased
+            }
+            fout.write(json.dumps(j) + '\n')
+
+            signature = hash8(read_buf)
+            print(
+                "%s iter %u: erased %u w/ erase_percent %0.3f%%, sig %s, erase completion: %0.1f"
+                % (now, passn, erased, erase_percent, signature,
+                   100. * complete_percent / erased_threshold))
+            if thalf is None and erase_percent >= 50:
+                thalf = tlast
+                dt_half = thalf - tstart
+                print("50%% erased after %0.1f sec" % (dt_half, ))
+            if complete_percent >= erased_threshold:
+                break
+        dt = tlast - tstart
+        print("Erased after %0.1f sec" % (dt, ))
+
+        j = {"type": "footer", "etime": dt, "half_etime": dt_half}
+        fout.write(json.dumps(j) + '\n')
+    return dt, dt_half
+
+
+def run(dout,
+        prog_dev,
+        erased_threshold=20.,
+        interval=3.0,
+        passes=10,
+        verbose=False):
+    if not os.path.exists(dout):
+        os.mkdir(dout)
+
+    print("")
+    prog = Minipro(device=prog_dev)
+    print("Checking programmer...")
+    size = len(prog.read())
+    print("Device is %u bytes" % size)
+    # Write 0's at the beginning of every pass
+    init_buf = bytearray(size)
+
+    for passn in range(passes):
+        fnout = '%s/iter_%02u.jl' % (dout, passn)
+        print('')
+        print('Writing to %s' % fnout)
+        print('Writing initial buffer...')
+        prog.write(init_buf)
+        print('Wrote')
+        wait_erased(fnout,
+                    prog_dev=prog_dev,
+                    erased_threshold=erased_threshold,
+                    interval=interval)
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Collect data on EPROM erasure time")
+    parser.add_argument('--device',
+                        required=True,
+                        help='minipro device. See "minipro -l"')
+    parser.add_argument('--passes',
+                        type=int,
+                        default=10,
+                        help='Number of program-erase cycles')
+    parser.add_argument('--dir', default=None, help='Output directory')
+    parser.add_argument('--erased-threshold',
+                        type=float,
+                        default=20.,
+                        help='Erase complete threshold (precent)')
+    parser.add_argument('--interval',
+                        type=float,
+                        default=3.0,
+                        help='Erase check interval (seconds)')
+    parser.add_argument(
+        '--postfix',
+        default="",
+        help='Use default output dir, but add description postfix')
+    util.add_bool_arg(parser, "--verbose", default=False)
+    args = parser.parse_args()
+
+    log_dir = args.dir
+    if log_dir is None:
+        log_dir = util.default_date_dir("log", "", args.postfix)
+
+    run(log_dir,
+        args.device,
+        passes=args.passes,
+        erased_threshold=args.erased_threshold,
+        interval=args.internval,
+        verbose=args.verbose)
