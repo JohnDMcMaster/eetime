@@ -53,7 +53,7 @@ class Minipro:
             code = f.read()
         return {"code": code}
 
-    def write(self, code, device=None, force=False):
+    def write(self, code, device=None, force=False, verify=True):
         device = device or self.device
         if device is None:
             raise ValueError("Device required")
@@ -61,6 +61,8 @@ class Minipro:
         with open(tmpfn, 'wb') as f:
             f.write(code)
         args = [self.path, '-p', device, '-w', tmpfn]
+        if not verify:
+            args.append("--skip_verify")
         if force:
             args.append("-y")
         stdout, stderr = self.files()

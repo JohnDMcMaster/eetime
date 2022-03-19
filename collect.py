@@ -167,7 +167,7 @@ def run(dout,
         if write_init:
             print('Writing initial buffer...')
             tstart = time.time()
-            prog.write(init_buf)
+            prog.write(init_buf, verify=False)
             prog_time = time.time() - tstart
             print('Wrote in %0.1f sec' % prog_time)
         else:
