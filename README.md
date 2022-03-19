@@ -70,7 +70,7 @@ Requirements:
 Example:
 
 ```
-$ ./collect.py --device '27C256@DIP28' --verbose --passes 10 --write-init --postfix intel_d27c256
+$ ./collect.py --device '27C256@DIP28' --verbose --passes 12 --write-init --postfix intel_d27c256
 ```
 
 ### Manual collection
