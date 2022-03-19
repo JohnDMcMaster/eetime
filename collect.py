@@ -39,6 +39,15 @@ def tnow():
     return datetime.datetime.utcnow().isoformat()
 
 
+def check_erase(prog):
+    read_buf = prog.read()["code"]
+    erased, erase_percent = is_erased(read_buf, prog_dev=prog.device)
+
+    signature = hash8(read_buf)
+    print("is_erased %u w/ erase_percent % 8.3f%%, sig %s" %
+          (erased, erase_percent, signature))
+
+
 def wait_erased(fnout,
                 prog,
                 erased_threshold=20.,
@@ -90,8 +99,9 @@ def wait_erased(fnout,
             end_check = 100. * complete_percent / erased_threshold
 
             j = {
+                "type": "read",
                 'iter': passn,
-                'datetime': now,
+                'seconds': tlast - tstart,
                 'read': fw2str(read_buf),
                 'read_meta': "zlib",
                 'complete_percent': complete_percent,
@@ -133,9 +143,12 @@ def run(dout,
         prog_dev,
         erased_threshold=20.,
         interval=3.0,
-        passes=10,
-        write_init=True,
+        passes=1,
+        write_init=False,
         verbose=False):
+    if passes > 1 and not write_init:
+        raise Exception("Must --write-init if > 1 pass")
+
     if not os.path.exists(dout):
         os.makedirs(dout, exist_ok=True)
 
@@ -175,10 +188,11 @@ if __name__ == "__main__":
     parser.add_argument('--device',
                         required=True,
                         help='minipro device. See "minipro -l"')
-    parser.add_argument('--passes',
-                        type=int,
-                        default=10,
-                        help='Number of program-erase cycles')
+    parser.add_argument(
+        '--passes',
+        type=int,
+        default=1,
+        help='Number of program-erase cycles. Requires --write-init')
     parser.add_argument('--dir', default=None, help='Output directory')
     parser.add_argument('--erased-threshold',
                         type=float,
@@ -194,8 +208,8 @@ if __name__ == "__main__":
         help='Use default output dir, but add description postfix')
     util.add_bool_arg(parser,
                       "--write-init",
-                      default=True,
-                      help="For debugging")
+                      default=False,
+                      help="Zero device at beginning. Only use on slow erases")
     util.add_bool_arg(parser, "--verbose", default=False)
     args = parser.parse_args()
 
