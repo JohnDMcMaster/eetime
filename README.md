@@ -42,19 +42,20 @@ Use minipro -l to find your device. Example:
 
 ```
 $ minipro -l |grep 27C256
-27C256 @DIP28
-27C256 @DIP28 #2
-27C256 @DIP28 #3
-27C256 @PLCC32
+...
+MX27C256@PLCC32
+27C256@DIP28
+27C256@PLCC32
+27C256@SOIC28
 ...
 ```
 
-I'm using Intel D27C256 which doens't appear in the list, so I'll use the closest match (generic "27C256 @DIP28")
+I'm using Intel D27C256 which doens't appear in the list, so I'll use the closest match (generic "27C256@DIP28")
 
 Start by seeing if you can talk to minipro using check.py. For example:
 
 ```
-$ ./check.py --verbose --device "27C256 @DIP28"
+$ ./check.py --verbose --device "27C256@DIP28"
 ```
 
 If all goes ok it should report whether or not your EPROM is currently blank.
@@ -69,7 +70,7 @@ Requirements:
 Example:
 
 ```
-$ ./collect.py --device '27C256 @DIP28' --verbose --passes 10 --write-init --postfix intel_d27c256
+$ ./collect.py --device '27C256@DIP28' --verbose --passes 10 --write-init --postfix intel_d27c256
 ```
 
 ### Manual collection
@@ -79,13 +80,13 @@ This is intended for high intensity sources.
 First zero out the EPROM:
 
 ```
-$ ./zero.py --device '27C256 @DIP28' --verbose
+$ ./zero.py --device '27C256@DIP28' --verbose
 ```
 
 Now turn on your UV source and immediately run:
 
 ```
-$ ./collect.py --device '27C256 @DIP28' --verbose --postfix intel_d27c256
+$ ./collect.py --device '27C256@DIP28' --verbose --postfix intel_d27c256
 ```
 
 ### Plotting
