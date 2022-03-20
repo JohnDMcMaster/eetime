@@ -53,6 +53,7 @@ def wait_erased(fnout,
                 erased_threshold=20.,
                 interval=3.0,
                 prog_time=None,
+                passn=0,
                 verbose=False):
     """
     erased_threshold: stop when this percent contiguous into a successful erase
@@ -77,7 +78,7 @@ def wait_erased(fnout,
         tlast = None
         # Timestamp when EPROM was first half erased
         thalf = None
-        passn = 0
+        iter = 0
         nerased = 0
         while True:
             if tlast is not None:
@@ -85,8 +86,7 @@ def wait_erased(fnout,
                     time.sleep(0.1)
 
             tlast = time.time()
-            now = tnow()
-            passn += 1
+            iter += 1
             read_buf = prog.read()["code"]
             erased, erase_percent = is_erased(read_buf, prog_dev=prog.device)
             if erased:
@@ -94,14 +94,15 @@ def wait_erased(fnout,
             else:
                 nerased = 0
             # Declare done when we've been erased for some percentage of elapsed time
-            complete_percent = 100.0 * nerased / passn
+            complete_percent = 100.0 * nerased / iter
             # Convert to more human friendly 100% scale
             end_check = 100. * complete_percent / erased_threshold
 
+            dt_this = tlast - tstart
             j = {
                 "type": "read",
-                'iter': passn,
-                'seconds': tlast - tstart,
+                'iter': iter,
+                'seconds': dt_this,
                 'read': fw2str(read_buf),
                 'read_meta': "zlib",
                 'complete_percent': complete_percent,
@@ -113,10 +114,10 @@ def wait_erased(fnout,
 
             signature = hash8(read_buf)
             print(
-                "%s iter % 3u: is_erased %u w/ erase_percent % 8.3f%%, sig %s, end_check: %0.1f%%"
+                "pass %u, iter % 3u: is_erased %u w/ erase_percent % 8.3f%%, sig %s, end_check: %0.1f%%"
                 % (
-                    now,
                     passn,
+                    iter,
                     erased,
                     erase_percent,
                     signature,
@@ -177,6 +178,7 @@ def run(dout,
                     erased_threshold=erased_threshold,
                     interval=interval,
                     prog_time=prog_time,
+                    passn=passn,
                     verbose=verbose)
 
 
