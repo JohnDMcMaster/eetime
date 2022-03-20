@@ -70,7 +70,7 @@ Requirements:
 Example:
 
 ```
-$ ./collect.py --device '27C256@DIP28' --verbose --passes 12 --write-init --postfix intel_d27c256
+$ ./collect.py --device '27C256@DIP28' --passes 12 --write-init --postfix intel_d27c256
 ```
 
 ### Manual collection
@@ -80,13 +80,13 @@ This is intended for high intensity sources.
 First zero out the EPROM:
 
 ```
-$ ./zero.py --device '27C256@DIP28' --verbose
+$ ./zero.py --device '27C256@DIP28'
 ```
 
 Now turn on your UV source and immediately run:
 
 ```
-$ ./collect.py --device '27C256@DIP28' --verbose --postfix intel_d27c256
+$ ./collect.py --device '27C256@DIP28' --postfix intel_d27c256
 ```
 
 ### Plotting
