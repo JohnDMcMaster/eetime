@@ -129,19 +129,36 @@ def lin_interp_50p(xs, ys, thresh=50.0):
     In practice sets increase pretty rapidly around 50% so this should be reliable
     """
 
+    if len(xs) < 2:
+        print("WARNING: interpolation failed (insufficient entries)")
+        return 0.0
+
     for i, (ax, ay) in enumerate(zip(xs, ys)):
         if ay >= thresh:
             break
     else:
-        raise Exception("Interpolation failed")
+        raise Exception("Interpolation failed (failed to hit thresh)")
+
+    if i == 0:
+        i = 1
+
+    # on the off chance we land at a stable point bump around
+    while True:
+        if ys[i - 1] == ys[i]:
+            print("WARNING: searching for better 50p point")
+            i += 1
+        else:
+            break
 
     x0 = xs[i - 1]
     x1 = xs[i]
     y0 = ys[i - 1]
     y1 = ys[i]
 
-    cs = np.poly1d(np.polyfit([x0, x1], [y0, y1], 1))
-    m, c = cs
+    m = (y1 - y0) / (x1 - x0)
+    c = y0 - x0 * m
+    # c = y1 - x1 * m
+
     thalf = (50 - c) / m
     print("thalf: %0.1f" % thalf)
     print("  x=%u => y=%0.1f" % (x0, y0))
@@ -157,8 +174,12 @@ def find_t100(ts, ps):
         if prevt is None:
             assert p == 100.0
         if p < 100.0:
-            return prevt
+            if prevt is None:
+                return 0.0
+            else:
+                return prevt
         prevt = t
+    return 0.0
 
 
 def main():
@@ -173,6 +194,7 @@ def main():
         print("")
         print(fn)
         times, percentages = decode(reads)
+        print("%u entries" % len(times))
         t50s.append(lin_interp_50p(times, percentages))
         t100s.append(find_t100(times, percentages))
 
@@ -194,8 +216,10 @@ def main():
 
     print("")
     print("Summary:")
-    print("  t50: %0.1f sec" % (statistics.median(t50s)))
-    print("  t100: %0.1f sec" % (statistics.median(t100s)))
+    if t50s:
+        print("  t50: %0.1f sec" % (statistics.median(t50s)))
+    if t100s:
+        print("  t100: %0.1f sec" % (statistics.median(t100s)))
 
 
 if __name__ == "__main__":
