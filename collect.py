@@ -54,6 +54,7 @@ def wait_erased(fnout,
                 interval=3.0,
                 prog_time=None,
                 passn=0,
+                need_passes=0,
                 verbose=False):
     """
     erased_threshold: stop when this percent contiguous into a successful erase
@@ -114,10 +115,12 @@ def wait_erased(fnout,
 
             signature = hash8(read_buf)
             print(
-                "pass %u, iter % 3u: is_erased %u w/ erase_percent % 8.3f%%, sig %s, end_check: %0.1f%%"
+                "pass %u / %u, iter % 3u @ %s: is_erased %u w/ erase_percent % 8.3f%%, sig %s, end_check: %0.1f%%"
                 % (
                     passn,
+                    need_passes,
                     iter,
+                    util.time_str_sec(dt_this),
                     erased,
                     erase_percent,
                     signature,
@@ -162,6 +165,8 @@ def run(dout,
     init_buf = bytearray(size)
 
     for passn in range(passes):
+        # 1 based indexing. At least make it match iter
+        passn += 1
         fnout = '%s/iter_%02u.jl' % (dout, passn)
         print('')
         print('Writing to %s' % fnout)
@@ -179,6 +184,7 @@ def run(dout,
                     interval=interval,
                     prog_time=prog_time,
                     passn=passn,
+                    need_passes=passes,
                     verbose=verbose)
 
 

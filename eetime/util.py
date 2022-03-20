@@ -107,3 +107,27 @@ def hexdump(data, label=None, indent='', address_width=8, f=sys.stdout):
             for c in tostr(data[row_start:row_start + real_data])
         ]))
         f.write((" " * (bytes_per_row - real_data)) + "|\n")
+
+
+def time_str_sec(delta):
+    fraction = delta % 1
+    delta -= fraction
+    delta = int(delta)
+    seconds = delta % 60
+    delta /= 60
+    minutes = delta % 60
+    delta /= 60
+    hours = delta
+    return '%02u:%02u:%02u' % (hours, minutes, seconds)
+
+
+def time_str_frac(delta):
+    fraction = delta % 1
+    delta -= fraction
+    delta = int(delta)
+    seconds = delta % 60
+    delta /= 60
+    minutes = delta % 60
+    delta /= 60
+    hours = delta
+    return '%02u:%02u:%02u.%04u' % (hours, minutes, seconds, fraction * 10000)
