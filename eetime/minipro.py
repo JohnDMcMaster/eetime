@@ -23,6 +23,7 @@ options:
 
 import subprocess
 import os
+from . import util
 
 
 class Minipro:
@@ -31,13 +32,20 @@ class Minipro:
         self.path = os.getenv("MINIPRO", 'minipro')
         self.device = device
 
-    def files(self):
+    def subprocess(self, args):
         if self.verbose:
-            # return subprocess.STDOUT, subprocess.STDOUT
-            return open("/dev/stdout", "w"), open("/dev/stderr", "w")
+            subprocess.check_call(args)
         else:
-            return subprocess.DEVNULL, subprocess.DEVNULL
-            #return open(os.devnull, 'wb'), open(os.devnull, 'wb')
+            subp = subprocess.Popen(args,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    shell=False)
+            (stdout, _stderr) = subp.communicate()
+            if subp.returncode:
+                print("")
+                print("minipro failed w/ rc %d" % subp.returncode)
+                print(util.tostr(stdout))
+                raise Exception("minipro failed w/ rc %d" % subp.returncode)
 
     def read(self, device=None, force=False):
         device = device or self.device
@@ -47,8 +55,7 @@ class Minipro:
         args = [self.path, '-p', device, '-r', tmpfn]
         if force:
             args.append("-y")
-        stdout, stderr = self.files()
-        subprocess.check_call(args, stdout=stdout, stderr=stderr)
+        self.subprocess(args)
         with open(tmpfn, 'rb') as f:
             code = f.read()
         return {"code": code}
@@ -65,5 +72,4 @@ class Minipro:
             args.append("--skip_verify")
         if force:
             args.append("-y")
-        stdout, stderr = self.files()
-        subprocess.check_call(args, stdout=stdout, stderr=stderr)
+        self.subprocess(args)
