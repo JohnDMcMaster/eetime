@@ -21,10 +21,13 @@ def load_jl(fn):
 
 
 def load_jls_arg(args, ignore_bad=True):
-    if os.path.isdir(args[0]):
-        fns = glob.glob(args[0] + "/*.jl")
-    else:
-        fns = args
+    # accept multiple dirs or individual files
+    fns = []
+    for fn in args:
+        if os.path.isdir(fn):
+            fns += list(glob.glob(fn + "/*.jl"))
+        else:
+            fns += [fn]
 
     for fn in sorted(fns):
         header, footer, reads = load_jl(fn)
