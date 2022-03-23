@@ -35,6 +35,10 @@ def fw2str(fw):
     return tostr(binascii.hexlify(zlib.compress(fw)))
 
 
+def str2fw(s):
+    return zlib.decompress(binascii.unhexlify(s))
+
+
 def tnow():
     return datetime.datetime.utcnow().isoformat()
 

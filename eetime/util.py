@@ -66,7 +66,12 @@ def tostr(buff):
         assert 0, type(buff)
 
 
-def hexdump(data, label=None, indent='', address_width=8, f=sys.stdout):
+def hexdump(data,
+            label=None,
+            indent='',
+            address_width=8,
+            f=sys.stdout,
+            terse=False):
     def isprint(c):
         return c >= ' ' and c <= '~'
 
@@ -90,7 +95,29 @@ def hexdump(data, label=None, indent='', address_width=8, f=sys.stdout):
         return start + bytes_per_half_row
 
     pos = 0
+    prev_row = None
+    dotted = False
     while pos < data_len:
+        if terse:
+            row = data[pos:pos + bytes_per_row]
+            last_row = pos + bytes_per_row >= len(data)
+            # Always print the last row
+            if not last_row:
+                if row == prev_row:
+                    if not dotted:
+                        f.write("...\n")
+                        dotted = True
+                    pos += bytes_per_row
+                    continue
+                prev_row = row
+
+                # Broke a repeat streak
+                # Display the previous row to make continuity clear
+                if dotted:
+                    pos -= bytes_per_row
+                    prev_row = None
+                dotted = False
+
         row_start = pos
         f.write(indent)
         if address_width:
@@ -110,6 +137,7 @@ def hexdump(data, label=None, indent='', address_width=8, f=sys.stdout):
 
 
 def time_str_sec(delta):
+    """Print a hh:mm::ss time"""
     fraction = delta % 1
     delta -= fraction
     delta = int(delta)
@@ -121,7 +149,8 @@ def time_str_sec(delta):
     return '%02u:%02u:%02u' % (hours, minutes, seconds)
 
 
-def time_str_frac(delta):
+def time_str_ms(delta):
+    """Print a hh:mm::ss.fff time"""
     fraction = delta % 1
     delta -= fraction
     delta = int(delta)
@@ -130,4 +159,4 @@ def time_str_frac(delta):
     minutes = delta % 60
     delta /= 60
     hours = delta
-    return '%02u:%02u:%02u.%04u' % (hours, minutes, seconds, fraction * 10000)
+    return '%02u:%02u:%02u.%03u' % (hours, minutes, seconds, fraction * 1000)

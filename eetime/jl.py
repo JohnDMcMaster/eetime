@@ -25,7 +25,7 @@ def load_jls_arg(args, ignore_bad=True):
     fns = []
     for fn in args:
         if os.path.isdir(fn):
-            fns += list(glob.glob(fn + "/*.jl"))
+            fns += sorted(list(glob.glob(fn + "/*.jl")))
         else:
             fns += [fn]
 
