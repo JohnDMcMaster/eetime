@@ -59,6 +59,7 @@ def wait_erased(fout,
                 prog_time=None,
                 passn=0,
                 need_passes=0,
+                timeout=None,
                 test=False,
                 verbose=False):
     """
@@ -81,7 +82,19 @@ def wait_erased(fout,
                 time.sleep(0.1)
 
         tlast = time.time()
+        dt_this = tlast - tstart
         iter += 1
+
+        if timeout and dt_this >= timeout:
+            j = {
+                "type": "timeout",
+                'iter': iter,
+                'seconds': dt_this,
+            }
+            fout.write(json.dumps(j) + '\n')
+            fout.flush()
+            raise Exception("Timed out")
+
         read_buf = prog.read()["code"]
         erased, erase_percent = is_erased(read_buf, prog_dev=prog.device)
         if erased or test:
@@ -96,7 +109,6 @@ def wait_erased(fout,
         # Convert to more human friendly 100% scale
         end_check = 100. * complete_percent / erased_threshold
 
-        dt_this = tlast - tstart
         j = {
             "type": "read",
             'iter': iter,
@@ -157,6 +169,7 @@ def run(dout,
         user=None,
         sn=None,
         test=False,
+        timeout=None,
         verbose=False):
     if passes > 1 and not write_init:
         raise Exception("Must --write-init if > 1 pass")
@@ -223,6 +236,7 @@ def run(dout,
                         prog_time=prog_time,
                         passn=passn,
                         need_passes=passes,
+                        timeout=timeout,
                         test=test,
                         verbose=verbose)
 
@@ -249,6 +263,10 @@ if __name__ == "__main__":
                         type=float,
                         default=3.0,
                         help='Erase check interval (seconds)')
+    parser.add_argument('--timeout',
+                        type=float,
+                        default=60 * 60,
+                        help='Per pass timeout in seconds')
     parser.add_argument('--eraser',
                         type=str,
                         default=None,
@@ -282,6 +300,10 @@ if __name__ == "__main__":
     if log_dir is None:
         log_dir = util.default_date_dir("log", "", args.postfix)
 
+    timeout = args.timeout
+    if timeout < 1.0:
+        timeout = None
+
     run(log_dir,
         args.device,
         passes=args.passes,
@@ -293,5 +315,6 @@ if __name__ == "__main__":
         bulb=args.bulb,
         user=args.user,
         sn=args.sn,
+        timeout=timeout,
         test=args.test,
         verbose=args.verbose)

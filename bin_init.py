@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 """
 Did you put something important into the test fixture?
 Just a hopeless data hoarder?
@@ -16,7 +15,8 @@ import collect
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Display and write the initial ROM read')
+    parser = argparse.ArgumentParser(
+        description='Display and write the initial ROM read')
     util.add_bool_arg(parser,
                       "--hexdump",
                       default=False,
