@@ -24,6 +24,10 @@ More detailed requirements:
   *  If your light source is too strong it will glitch the chip
   *  Shouldn't be the case for commodity EPROM erasers
 
+See also:
+* https://proghq.org/wiki/index.php/EPROM_Sensitivity
+* https://proghq.org/media/eetime/
+
 
 ## Installation
 
