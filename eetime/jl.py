@@ -11,6 +11,8 @@ def load_jl(fn):
         j = json.loads(l)
         if j["type"] == "header":
             header = j
+            if "sn" in header:
+                header["sn"] = header["sn"].upper()
         elif j["type"] == "footer":
             footer = j
         elif j["type"] == "read":

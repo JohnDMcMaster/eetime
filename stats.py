@@ -133,6 +133,10 @@ def lin_interp_50p(xs, ys, thresh=50.0):
         print("WARNING: interpolation failed (insufficient entries)")
         return 0.0
 
+    if ys[0] > 0.0:
+        print("WARNING: interpolation failed (t0 not filled)")
+        return 0.0
+
     for i, (ax, ay) in enumerate(zip(xs, ys)):
         if ay >= thresh:
             break

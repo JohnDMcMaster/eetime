@@ -107,3 +107,4 @@ History:
   * "erase_time" changed from 120% to 100% completion (added "run_time")
   * Added metadata options
   * Write initial EPROM state
+  * csv_gen.py, annotate.py
