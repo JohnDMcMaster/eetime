@@ -182,17 +182,22 @@ def find_t100(ts, ps):
     return 0.0
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Help')
-    parser.add_argument('jls', nargs="+", help='')
-    args = parser.parse_args()
+def run(jls=None, d=None):
+    # TODO: make explicit dir load
+    if d:
+        jls = [d]
 
     t100s = []
     t50s = []
-    for jli, (fn, header, _footer,
-              reads) in enumerate(eetime.jl.load_jls_arg(args.jls)):
+    ref_header = None
+    ref_footer = None
+    for jli, (fn, header, footer,
+              reads) in enumerate(eetime.jl.load_jls_arg(jls)):
         print("")
         print(fn)
+        if ref_header is None:
+            ref_header = header
+            ref_footer = footer
         times, percentages = decode(reads)
         print("%u entries" % len(times))
         t50s.append(lin_interp_50p(times, percentages))
@@ -216,10 +221,28 @@ def main():
 
     print("")
     print("Summary:")
+    j = {
+        "header": ref_header,
+        "footer": ref_footer,
+        "n": len(t100s),
+    }
     if t50s:
-        print("  t50: %0.1f sec" % (statistics.median(t50s)))
+        est_t50 = statistics.median(t50s)
+        print("  t50: %0.1f sec" % (est_t50))
+        j["t50"] = est_t50
     if t100s:
-        print("  t100: %0.1f sec" % (statistics.median(t100s)))
+        est_t100 = statistics.median(t100s)
+        print("  t100: %0.1f sec" % (est_t100))
+        j["t100"] = est_t100
+
+    return j
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Help')
+    parser.add_argument('jls', nargs="+", help='')
+    args = parser.parse_args()
+    run(args.jls)
 
 
 if __name__ == "__main__":
