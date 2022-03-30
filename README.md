@@ -103,7 +103,7 @@ $ ./plot.py log/2022-03-19_01_intel_d27c256/*.jl log/2022-03-19_02_intel_d27c256
 History:
 * v1.0.0
   * It does stuff
-* TBD (v1.1.0)
+* v1.1.0
   * "erase_time" changed from 120% to 100% completion (added "run_time")
   * Added metadata options
   * Write initial EPROM state
