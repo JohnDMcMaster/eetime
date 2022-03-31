@@ -172,13 +172,13 @@ def run(root_dir, csv_fn, sns_fn=None, strict=True):
 def main():
     parser = argparse.ArgumentParser(
         description="Generate a .csv w/ high level stats")
-    parser.add_argument('--sns', default="prod/sns.csv", help='S/N .csv in')
+    parser.add_argument('--sns', default="db/sns.csv", help='S/N .csv in')
     parser.add_argument('root_dir',
-                        default="prod/prod",
+                        default="db/prod",
                         nargs="?",
                         help='Directory to look around in')
     parser.add_argument('csv',
-                        default="prod/out.csv",
+                        default="db/runs.csv",
                         nargs="?",
                         help='.csv out')
     args = parser.parse_args()

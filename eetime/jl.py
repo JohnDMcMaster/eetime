@@ -17,6 +17,8 @@ def load_jl(fn):
             footer = j
         elif j["type"] == "read":
             reads.append(j)
+        elif j["type"] == "timeout":
+            break
         else:
             assert 0, j["type"]
     return header, footer, reads

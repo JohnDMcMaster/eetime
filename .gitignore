@@ -141,4 +141,4 @@ dmypy.json
 /tmp
 /out
 /log
-
+/db

@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
 import statistics
-import math
 
 
 def write_header(f):
     l = "Vendor,Device"
-    l += ",T50 (sec),T100 (sec)"
-    l += ",N,S/Ns"
+    l += ",T50 (sec),T50 (stdev)"
+    l += ",T100 (sec),T100 (stdev)"
+    l += ",N runs,N S/Ns,S/Ns"
     f.write(l + "\n")
     f.flush()
 
 
-def write_row(f, vendor, device, t50, t100, n, sns):
+def write_row(f, vendor, device, t50, t100, n_runs, sns, t50_stddev,
+              t100_stddev):
     l = "%s,%s" % (vendor, device)
-    l += ",%0.1f,%0.1f" % (t50, t100)
-    l += ",%u,%s" % (n, ', '.join(sns))
+    l += ",%0.1f,%0.3f" % (t50, t50_stddev)
+    l += ",%0.1f,%0.3f" % (t100, t100_stddev)
+    l += ",%u,%u,%s" % (n_runs, len(sns), ' '.join(sns))
     f.write(l + "\n")
     f.flush()
 
@@ -66,16 +67,22 @@ def run(csv_in, csv_out):
         t50s = sorted([row["t50_norm"] for row in rows if row["t50_norm"]])
         t100s = sorted([row["t100_norm"] for row in rows if row["t100_norm"]])
         # maybe RMS or median?
+        t50_stddev = 0.0
+        t50 = 0.0
         if t50s:
             t50 = rms(t50s)
-        else:
-            t50 = 0.0
+            if len(t50s) >= 2:
+                t50_stddev = statistics.stdev(t50s)
+        t100 = 0.0
+        t100_stddev = 0.0
         if t100s:
             t100 = rms(t100s)
-        else:
-            t100 = 0.0
+            if len(t100s) >= 2:
+                t100_stddev = statistics.stdev(t100s)
         n = max(len(t50s), len(t100s))
-        write_row(f, vendor, device, t50, t100, n, sns)
+        sns = sorted(set(sns))
+        write_row(f, vendor, device, t50, t100, n, sns, t50_stddev,
+                  t100_stddev)
 
     f.close()
     print("Wrote %s" % csv_out)
@@ -84,11 +91,11 @@ def run(csv_in, csv_out):
 def main():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument('csv_in',
-                        default="prod/out.csv",
+                        default="db/runs.csv",
                         nargs="?",
                         help='.csv in')
     parser.add_argument('csv_out',
-                        default="prod/aggregate.csv",
+                        default="db/aggregate.csv",
                         nargs="?",
                         help='.csv out')
     args = parser.parse_args()
