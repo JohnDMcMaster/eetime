@@ -279,7 +279,7 @@ if __name__ == "__main__":
     parser.add_argument('--sn', type=str, default=None, help='S/N metadata')
     parser.add_argument(
         '--postfix',
-        default="",
+        default=None,
         help='Use default output dir, but add description postfix')
     util.add_bool_arg(parser,
                       "--read-init",
@@ -298,7 +298,11 @@ if __name__ == "__main__":
 
     log_dir = args.dir
     if log_dir is None:
-        log_dir = util.default_date_dir("log", "", args.postfix)
+        postfix = args.postfix
+        # keep a descriptive default name
+        if postfix is None:
+            postfix = "sn-%s_bulb-%s" % (args.sn, args.bulb)
+        log_dir = util.default_date_dir("log", "", postfix)
 
     timeout = args.timeout
     if timeout < 1.0:

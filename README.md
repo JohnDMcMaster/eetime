@@ -112,3 +112,6 @@ History:
   * Added metadata options
   * Write initial EPROM state
   * csv_gen.py, annotate.py
+* TBD v1.2.0
+  * csv_aggregate.py
+  * wps7 wrapper example
